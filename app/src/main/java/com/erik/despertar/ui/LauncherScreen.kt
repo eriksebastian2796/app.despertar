@@ -36,6 +36,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.window.Popup
 import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -44,7 +45,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun LauncherScreen(viewModel: LauncherViewModel = hiltViewModel(LocalContext.current as ComponentActivity)) {
-    val isDrawerOpen by viewModel.isDrawerOpen.collectAsState()
+    val isDrawerOpen by viewModel.isDrawerOpen.collectAsStateWithLifecycle()
     val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF1C1C1E) else Color.White
 
     Box(
@@ -77,8 +78,8 @@ fun LauncherScreen(viewModel: LauncherViewModel = hiltViewModel(LocalContext.cur
 
 @Composable
 fun LauncherHome(viewModel: LauncherViewModel) {
-    val favorites by viewModel.favorites.collectAsState()
-    val dockApps by viewModel.dockApps.collectAsState()
+    val favorites by viewModel.favorites.collectAsStateWithLifecycle()
+    val dockApps by viewModel.dockApps.collectAsStateWithLifecycle()
     
     var time by remember { mutableStateOf(currentTime()) }
     var date by remember { mutableStateOf(currentDate()) }
@@ -144,10 +145,21 @@ fun FavoriteLauncherItem(app: AppInfo) {
             .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        app.icon?.let {
+            Image(
+                bitmap = it.toBitmap().asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+        }
         Text(
             text = app.label,
             style = MaterialTheme.typography.headlineSmall,
-            fontSize = 24.sp
+            fontSize = 24.sp,
+            color = if (isSystemInDarkTheme()) Color.White else Color.Black
         )
     }
 }
@@ -196,7 +208,7 @@ fun DockIcon(app: AppInfo) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDrawer(viewModel: LauncherViewModel) {
-    val apps by viewModel.installedApps.collectAsState()
+    val apps by viewModel.installedApps.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     val listState = rememberLazyListState()

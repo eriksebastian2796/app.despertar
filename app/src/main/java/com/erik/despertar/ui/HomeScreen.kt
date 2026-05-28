@@ -24,12 +24,13 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel: LauncherViewModel = hiltViewModel(LocalContext.current as ComponentActivity)) {
-    val favorites by viewModel.favorites.collectAsState()
-    val installedApps by viewModel.installedApps.collectAsState()
+    val favorites by viewModel.favorites.collectAsStateWithLifecycle()
+    val installedApps by viewModel.installedApps.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     val context = LocalContext.current
 

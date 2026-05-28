@@ -6,10 +6,10 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.erik.despertar.data.FavoriteApp
+import com.erik.despertar.data.FavoriteDao
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -22,14 +22,23 @@ data class AppInfo(
 
 @HiltViewModel
 class LauncherViewModel @Inject constructor(
-    application: Application
+    application: Application,
+    private val favoriteDao: FavoriteDao
 ) : AndroidViewModel(application) {
+
+    private val pm = application.packageManager
 
     private val _installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val installedApps: StateFlow<List<AppInfo>> = _installedApps.asStateFlow()
 
-    private val _favorites = MutableStateFlow<List<AppInfo>>(emptyList())
-    val favorites: StateFlow<List<AppInfo>> = _favorites.asStateFlow()
+    // Reactividad Real: Observamos el DAO y mapeamos a AppInfo
+    val favorites: StateFlow<List<AppInfo>> = favoriteDao.getAllFavorites()
+        .map { favoriteEntities ->
+            favoriteEntities.mapNotNull { entity ->
+                getAppInfoForPackage(entity.packageName)
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _dockApps = MutableStateFlow<List<AppInfo>>(emptyList())
     val dockApps: StateFlow<List<AppInfo>> = _dockApps.asStateFlow()
@@ -44,7 +53,6 @@ class LauncherViewModel @Inject constructor(
     fun loadApps() {
         viewModelScope.launch {
             val context = getApplication<Application>()
-            val pm = context.packageManager
             val mainIntent = Intent(Intent.ACTION_MAIN, null)
             mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
@@ -70,12 +78,26 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
+    private fun getAppInfoForPackage(packageName: String): AppInfo? {
+        return try {
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            AppInfo(
+                packageName = packageName,
+                label = pm.getApplicationLabel(appInfo).toString(),
+                intent = pm.getLaunchIntentForPackage(packageName),
+                icon = pm.getApplicationIcon(appInfo)
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun findDockApps(allApps: List<AppInfo>): List<AppInfo> {
         val dockPackages = listOf(
-            listOf("dialer", "phone", "contacts"),     // Phone
-            listOf("messaging", "sms", "mms", "chat"), // Messages
-            listOf("camera"),                         // Camera
-            listOf("browser", "chrome", "firefox")     // Browser
+            listOf("dialer", "phone", "contacts"),
+            listOf("messaging", "sms", "mms", "chat"),
+            listOf("camera"),
+            listOf("browser", "chrome", "firefox")
         )
         
         return dockPackages.mapNotNull { keywords ->
@@ -86,13 +108,19 @@ class LauncherViewModel @Inject constructor(
     }
 
     fun addToFavorites(app: AppInfo) {
-        if (_favorites.value.size < 6 && _favorites.value.none { it.packageName == app.packageName }) {
-            _favorites.value = _favorites.value + app
+        viewModelScope.launch {
+            // Límite de 6 favoritos
+            val currentCount = favoriteDao.getAllFavorites().first().size
+            if (currentCount < 6) {
+                favoriteDao.insert(FavoriteApp(app.packageName))
+            }
         }
     }
 
     fun removeFromFavorites(app: AppInfo) {
-        _favorites.value = _favorites.value.filter { it.packageName != app.packageName }
+        viewModelScope.launch {
+            favoriteDao.delete(FavoriteApp(app.packageName))
+        }
     }
 
     fun setDrawerOpen(open: Boolean) {

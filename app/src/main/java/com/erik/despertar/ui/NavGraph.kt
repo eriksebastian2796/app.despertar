@@ -62,7 +62,9 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             HomeScreen()
         }
         composable(route = BottomBarScreen.Alarm.route) {
-            AlarmScreen()
+            AlarmScreen(onSleepConfigClick = {
+                // Navegar a configuración de sueño cuando esté lista
+            })
         }
         composable(route = BottomBarScreen.Apps.route) {
             AppsScreen()

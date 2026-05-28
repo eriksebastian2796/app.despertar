@@ -41,12 +41,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // Volver al Home Screen si se presiona Home estando en el Drawer
+        setIntent(intent) // IMPORTANTE: Actualizar el intent de la actividad
+        
         if (isLauncherMode(intent)) {
-            // Podríamos inyectar el ViewModel aquí o usar un evento global, 
-            // pero por simplicidad el estado vive en el ViewModel que 
-            // detecta el ciclo de vida o recomposición.
-            // Para resetear el estado del Drawer:
             val viewModel: LauncherViewModel by viewModels()
             viewModel.setDrawerOpen(false)
         }
