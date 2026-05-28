@@ -1,15 +1,13 @@
 package com.erik.despertar
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -18,8 +16,10 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.erik.despertar.ui.BottomBarScreen
+import com.erik.despertar.ui.LauncherScreen
 import com.erik.despertar.ui.NavGraph
 import com.erik.despertar.ui.theme.DespertarTheme
+import com.erik.despertar.ui.LauncherViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -27,11 +27,33 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
         setContent {
             DespertarTheme {
-                MainScreen()
+                if (isLauncherMode(intent)) {
+                    LauncherScreen()
+                } else {
+                    MainScreen()
+                }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Volver al Home Screen si se presiona Home estando en el Drawer
+        if (isLauncherMode(intent)) {
+            // Podríamos inyectar el ViewModel aquí o usar un evento global, 
+            // pero por simplicidad el estado vive en el ViewModel que 
+            // detecta el ciclo de vida o recomposición.
+            // Para resetear el estado del Drawer:
+            val viewModel: LauncherViewModel by viewModels()
+            viewModel.setDrawerOpen(false)
+        }
+    }
+
+    private fun isLauncherMode(intent: Intent?): Boolean {
+        return intent?.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)
     }
 }
 
@@ -48,7 +70,9 @@ fun MainScreen() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+            ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
 
