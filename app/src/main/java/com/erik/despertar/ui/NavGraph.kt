@@ -9,11 +9,14 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+
+import com.erik.despertar.ui.alarm.AlarmEditScreen
 
 sealed class BottomBarScreen(
     val route: String,
@@ -62,9 +65,32 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             HomeScreen()
         }
         composable(route = BottomBarScreen.Alarm.route) {
-            AlarmScreen(onSleepConfigClick = {
-                // Navegar a configuración de sueño cuando esté lista
-            })
+            val viewModel: AlarmViewModel = hiltViewModel()
+            AlarmScreen(
+                viewModel = viewModel,
+                onSleepConfigClick = {
+                    // Navegar a configuración de sueño cuando esté lista
+                },
+                onAddAlarmClick = {
+                    navController.navigate("alarm_edit/0")
+                },
+                onEditAlarmClick = { alarmId ->
+                    navController.navigate("alarm_edit/$alarmId")
+                }
+            )
+        }
+        composable(
+            route = "alarm_edit/{alarmId}",
+            arguments = listOf(navArgument("alarmId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val alarmId = backStackEntry.arguments?.getInt("alarmId")
+            val viewModel: AlarmViewModel = hiltViewModel()
+            AlarmEditScreen(
+                alarmId = alarmId,
+                viewModel = viewModel,
+                onSave = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
+            )
         }
         composable(route = BottomBarScreen.Apps.route) {
             AppsScreen()

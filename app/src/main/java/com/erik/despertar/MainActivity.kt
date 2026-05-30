@@ -1,16 +1,19 @@
 package com.erik.despertar
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -20,6 +23,7 @@ import com.erik.despertar.ui.LauncherScreen
 import com.erik.despertar.ui.NavGraph
 import com.erik.despertar.ui.theme.DespertarTheme
 import com.erik.despertar.ui.LauncherViewModel
+import com.erik.despertar.util.AlarmScheduler
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -27,9 +31,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        if (!AlarmScheduler.checkExactAlarmPermission(this)) {
+            AlarmScheduler.requestExactAlarmPermission(this)
+        }
         
         setContent {
             DespertarTheme {
+                BatteryOptimizationCheck()
                 if (isLauncherMode(intent)) {
                     LauncherScreen()
                 } else {
@@ -51,6 +60,41 @@ class MainActivity : ComponentActivity() {
 
     private fun isLauncherMode(intent: Intent?): Boolean {
         return intent?.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)
+    }
+}
+
+@Composable
+fun BatteryOptimizationCheck() {
+    val context = LocalContext.current
+    val pm = remember { context.getSystemService(PowerManager::class.java) }
+    var showDialog by remember { 
+        mutableStateOf(!pm.isIgnoringBatteryOptimizations(context.packageName)) 
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Aviso de optimización") },
+            text = { 
+                Text("Para que la alarma suene a tiempo, Despertar necesita estar excluida del ahorro de batería del sistema.") 
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showDialog = false
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                    context.startActivity(intent)
+                }) {
+                    Text("Configurar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Más tarde")
+                }
+            }
+        )
     }
 }
 

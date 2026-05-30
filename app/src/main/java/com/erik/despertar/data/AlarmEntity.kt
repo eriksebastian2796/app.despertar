@@ -12,6 +12,7 @@ data class AlarmEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val hour: Int,
     val minute: Int,
+    val label: String = "",
     val isEnabled: Boolean = true,
     val repeatDays: List<Int> = emptyList(), // 1=Lun, 7=Dom
     val challengeType: ChallengeType = ChallengeType.NONE,
